@@ -6,8 +6,8 @@ from win10toast import ToastNotifier
 
 # 配置参数
 # 用户登录凭证
-username = 'username'
-password = 'password'
+username = 'username'  # 请修改为自己的账号
+password = 'password'  # 请修改为自己的密码
 MAX_RETRIES = 13  # 最大重试次数
 RETRY_INTERVAL = 5  # 重试等待时间
 AUTH_BASE_URL = 'https://tree.buct.edu.cn'  # 校园网认证地址
@@ -120,7 +120,7 @@ class CustomBase64:
         idx = self._ALPHA.find(s[i])
         if idx == -1:
             raise ValueError("Cannot decode base64")
-        return idx
+        return idx  # 获取字符对应的索引
     
     def decode(self, s):
         pads = 0
@@ -211,8 +211,8 @@ def get_client_ip():
                 'callback': f'jQuery{ts}_{ts+6}',
                 'username': 'dummy',
                 'ip': '0.0.0.0',
-                '_': ts
-            },
+                '_': ts  # 时间戳
+            },  # 服务器端不会校验信息，可使用虚拟信息获取客户端IP
             verify=False,
             timeout=3
         )
@@ -277,13 +277,13 @@ def campus_login(username, password):
                 'password': f'{{MD5}}{md5_password}',
                 'os': 'Windows 10',
                 'name': 'Windows',
-                'double_stack': '0',
+                'double_stack': '0',  # 未开启双栈认证时，参数为 0
                 'chksum': sha1(f"{token}{username}{token}{md5_password}{token}1{token}{client_ip}{token}200{token}1{token}{info}"),  # 计算校验值
                 'info': info,
                 'ac_id': '1',
                 'ip': client_ip,
-                'n': '200',
-                'type': '1',
+                'n': '200',  # 定值
+                'type': '1', # 定值
                 '_': ts + 1
             },
             verify=False,
