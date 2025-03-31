@@ -8,14 +8,15 @@ from win10toast import ToastNotifier
 # 用户登录凭证
 username = 'username'  # 请修改为自己的账号
 password = 'password'  # 请修改为自己的密码
-MAX_RETRIES = 13  # 最大重试次数
+MAX_RETRIES = 11  # 最大重试次数
 RETRY_INTERVAL = 5  # 重试等待时间
 AUTH_BASE_URL = 'https://tree.buct.edu.cn'  # 校园网认证地址
 INTERNET_CHECK_URL = 'https://www.baidu.com'  # 网络状态检测地址
 
-# ================ 复刻网站js的加密算法 ================
+# ================ 网站js加密算法 ================
 import hmac
 import hashlib
+import subprocess
 
 def custom_md5(password, token):
     md5_hash = hmac.new(token.encode('utf-8'), password.encode('utf-8'), hashlib.md5).hexdigest()
@@ -24,181 +25,36 @@ def custom_md5(password, token):
 def sha1(data):
     return hashlib.sha1(data.encode('utf-8')).hexdigest()  # 生成SHA1哈希
 
-
-def s(a, b):
-    c = len(a)
-    v = []
-    for i in range(0, c, 4):
-        idx = i >> 2
-        while len(v) <= idx:
-            v.append(0)
-        char_at_i = ord(a[i]) if i < c else 0
-        char_at_i_plus_1 = ord(a[i + 1]) if i + 1 < c else 0
-        char_at_i_plus_2 = ord(a[i + 2]) if i + 2 < c else 0
-        char_at_i_plus_3 = ord(a[i + 3]) if i + 3 < c else 0
-        value = char_at_i | (char_at_i_plus_1 << 8) | (char_at_i_plus_2 << 16) | (char_at_i_plus_3 << 24)
-        if value > 0x7FFFFFFF:
-            value = value - 0x100000000
-        v[idx] = value
-    if b:
-        v.append(c)
-    return v  # 生成数组v
-
-def ss(a, b):
-    v = []
-    for i in range(0, len(a), 4):
-        val = 0
-        for j in range(4):
-            if i + j < len(a):
-                val |= ord(a[i + j]) << (j * 8)
-        v.append(val & 0xFFFFFFFF)
-    if b:
-        v.append(len(a) & 0xFFFFFFFF)
-    return v  # 生成数组k
-
-def l(a, b):
-    result = []
-    for x in a:
-        x = x & 0xFFFFFFFF
-        bytes_part = [
-            x & 0xFF,
-            (x >> 8) & 0xFF,
-            (x >> 16) & 0xFF,
-            (x >> 24) & 0xFF,
-        ]
-        chars = ''.join([chr(b) for b in bytes_part if b != 0])
-        result.append(chars)
-    s_joined = ''.join(result)
-    if b:
-        if not a:
-            return ''
-        c = (len(a) - 1) * 4
-        m = a[-1]
-        if m > c:
-            return s_joined[:c]
-        return s_joined[:m]
-    return s_joined
-
-def encode(s_str, s_key):
-    if s_str == '':
-        return '', []
-    v = s(s_str, True)
-    k = ss(s_key, False)
-    if len(k) < 4:
-        k = k + [0] * (4 - len(k))
-    n = len(v) - 1
-    z = v[n]
-    y = v[0]
-    c = 0x86014019 | 0x183639A0
-    q = int(6 + 52 / (n + 1))
-    d = 0
-    while q > 0:
-        q -= 1
-        d = (d + c) & (0x8CE0D9BF | 0x731F2640)
-        e = (d >> 2) & 3
-        for p in range(n):
-            y = v[p + 1]
-            m = (z >> 5) ^ (y << 2)
-            m += (y >> 3) ^ (z << 4) ^ (d ^ y)
-            m += k[(p & 3) ^ e] ^ z
-            z = v[p] = (v[p] + m) & (0xEFB8D130 | 0x10472ECF)
-        y = v[0]
-        m = (z >> 5) ^ (y << 2)
-        m += (y >> 3) ^ (z << 4) ^ (d ^ y)
-        m += k[(p + 1) & 3 ^ e] ^ z
-        z = v[n] = (v[n] + m) & (0xBB390742 | 0x44C6F8BD)
-    return l(v, False)
-
-class CustomBase64:
-    # Base64 编码与解码函数
-    def __init__(self):
-        self._PADCHAR = "="
-        # 自定义 Base64 字符集
-        self._ALPHA = "LVoJPiCN2R8G90yg+hmFHuacZ1OWMnrsSTXkYpUq/3dlbfKwv6xztjI7DeBE45QA"
-    
-    def _getbyte64(self, s, i):
-        idx = self._ALPHA.find(s[i])
-        if idx == -1:
-            raise ValueError("Cannot decode base64")
-        return idx  # 获取字符对应的索引
-    
-    def decode(self, s):
-        pads = 0
-        imax = len(s)
-        x = []
-        s = str(s)
-        if imax == 0:
-            return s
-        if imax % 4 != 0:
-            raise ValueError("Cannot decode base64")
-        if s[imax - 1] == self._PADCHAR:
-            pads = 1
-            if s[imax - 2] == self._PADCHAR:
-                pads = 2
-            imax -= 4
-        i = 0
-        while i < imax:
-            b10 = (self._getbyte64(s, i) << 18) | (self._getbyte64(s, i + 1) << 12) | \
-                  (self._getbyte64(s, i + 2) << 6) | self._getbyte64(s, i + 3)
-            x.append(chr(b10 >> 16))
-            x.append(chr((b10 >> 8) & 255))
-            x.append(chr(b10 & 255))
-            i += 4
-        if pads == 1:
-            b10 = (self._getbyte64(s, i) << 18) | (self._getbyte64(s, i + 1) << 12) | \
-                  (self._getbyte64(s, i + 2) << 6)
-            x.append(chr(b10 >> 16))
-            x.append(chr((b10 >> 8) & 255))
-        elif pads == 2:
-            b10 = (self._getbyte64(s, i) << 18) | (self._getbyte64(s, i + 1) << 12)
-            x.append(chr(b10 >> 16))
-        return "".join(x)
-    
-    def _getbyte(self, s, i):
-        x = ord(s[i])
-        if x > 255:
-            raise ValueError("INVALID_CHARACTER_ERR")
-        return x
-    
-    def encode(self, s):
-        s = str(s)
-        x = []
-        imax = len(s) - (len(s) % 3)
-        if len(s) == 0:
-            return s
-        i = 0
-        while i < imax:
-            b10 = (self._getbyte(s, i) << 16) | (self._getbyte(s, i + 1) << 8) | self._getbyte(s, i + 2)
-            x.append(self._ALPHA[b10 >> 18])
-            x.append(self._ALPHA[(b10 >> 12) & 63])
-            x.append(self._ALPHA[(b10 >> 6) & 63])
-            x.append(self._ALPHA[b10 & 63])
-            i += 3
-        remainder = len(s) - imax
-        if remainder == 1:
-            b10 = self._getbyte(s, i) << 16
-            x.append(self._ALPHA[b10 >> 18])
-            x.append(self._ALPHA[(b10 >> 12) & 63])
-            x.append(self._PADCHAR)
-            x.append(self._PADCHAR)
-        elif remainder == 2:
-            b10 = (self._getbyte(s, i) << 16) | (self._getbyte(s, i + 1) << 8)
-            x.append(self._ALPHA[b10 >> 18])
-            x.append(self._ALPHA[(b10 >> 12) & 63])
-            x.append(self._ALPHA[(b10 >> 6) & 63])
-            x.append(self._PADCHAR)
-        return "".join(x)
+def call_js_function(func_name, *args):
+    """外部JS函数调用"""
+    startupinfo = None
+    if sys.platform.startswith('win'):
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+        
+    args_json = [json.dumps(arg) for arg in args]
+    result = subprocess.run(
+        ['node', 'encode.js', func_name] + args_json,
+        capture_output=True,
+        text=True,
+        encoding='utf-8',
+        startupinfo=startupinfo,  # 使用隐藏窗口选项，避免控制台窗口弹出
+        creationflags=subprocess.CREATE_NO_WINDOW  # Windows 专用 flag
+    )
+    if result.stderr:
+        raise RuntimeError(f"JS错误: {result.stderr.strip()}")
+    try:
+        return json.loads(result.stdout)
+    except json.JSONDecodeError:
+        return result.stdout  # 返回原始字符串
 
 def encode_user_info(info, token):
     # 手动将所有数值字段转换为字符串，确保一致性
     info = {k: str(v) for k, v in info.items()}
     info_json = json.dumps(info, ensure_ascii=False, separators=(',', ':'))
-    encrypted = encode(info_json, token)
-    base64 = CustomBase64()
-    if not encrypted:
-        return '{SRBX1}' + base64.encode('')
-    base64_str = base64.encode(encrypted)
-    return '{SRBX1}' + base64_str
+    encrypted = call_js_function('encode',info_json, token)
+    return '{SRBX1}' + encrypted
 # ================ 加密算法结束 ================
 
 def get_client_ip():
@@ -304,7 +160,7 @@ def main():
         # 步骤1：检测校园网连接
         if not get_client_ip():
             if not has_shown_retry:
-                toaster.show_toast("校园网状态", "连接不可用", duration=3)
+                toaster.show_toast("校园网状态", "连接不可用", duration=2)
                 has_shown_retry = True
             retry_count += 1
             time.sleep(RETRY_INTERVAL)
@@ -312,21 +168,21 @@ def main():
         
         # 步骤2：检测互联网访问
         if check_internet():
-            toaster.show_toast("网络状态", "已连接到互联网", duration=3)
+            toaster.show_toast("网络状态", "已连接到互联网", duration=2)
             break
         
         # 步骤3：尝试登录
         if campus_login(username, password):
-            toaster.show_toast("认证成功", "已登录到校园网", duration=3)
+            toaster.show_toast("认证成功", "已登录到校园网", duration=2)
             break
         
         # 登录失败处理
         retry_count += 1
         if retry_count == 1:
-            toaster.show_toast("认证失败", "正在自动重试...", duration=3)
+            toaster.show_toast("认证失败", "正在自动重试...", duration=2)
         time.sleep(RETRY_INTERVAL)
     else:
-        toaster.show_toast("错误", "连接超时", duration=3)
+        toaster.show_toast("错误", "连接超时", duration=2)
 
 if __name__ == "__main__":
     # 隐藏控制台窗口（仅当打包为exe时生效）
