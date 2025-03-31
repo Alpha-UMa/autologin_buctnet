@@ -38,12 +38,11 @@
 ### 快速开始
 
 1. 安装依赖
-安装 Nodejs
-安装 win10toast 库
-<!--或是删除 win10toast 相关内容-->
-```bash
-pip install requests win10toast
-```
+   - 安装 Nodejs
+   - 安装 win10toast 库<!--或是删除 win10toast 相关内容-->
+        ```bash
+        pip install requests win10toast
+        ```
 2. 配置参数
 ```python
 # 修改以下参数
