@@ -1,4 +1,5 @@
 // encode.js
+// 用于动态调用 original.js 中的函数
 const crypto = require('./original.js');
 
 const [_, __, funcName, ...args] = process.argv;

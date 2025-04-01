@@ -1,14 +1,19 @@
+# login.pyw
+# -*- coding: utf-8 -*-
 import requests
 import time
 import sys
+import os
 import json
 from win10toast import ToastNotifier
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))  # 计划任务默认运行在 %SystemRoot%\System32 ，该句将切换至脚本所在目录，以免相对路径引用错误
 
 # 配置参数
 # 用户登录凭证
 username = 'username'  # 请修改为自己的账号
 password = 'password'  # 请修改为自己的密码
-MAX_RETRIES = 11  # 最大重试次数
+MAX_RETRIES = 9  # 最大重试次数
 RETRY_INTERVAL = 5  # 重试等待时间
 AUTH_BASE_URL = 'https://tree.buct.edu.cn'  # 校园网认证地址
 INTERNET_CHECK_URL = 'https://www.baidu.com'  # 网络状态检测地址
@@ -53,7 +58,7 @@ def encode_user_info(info, token):
     # 手动将所有数值字段转换为字符串，确保一致性
     info = {k: str(v) for k, v in info.items()}
     info_json = json.dumps(info, ensure_ascii=False, separators=(',', ':'))
-    encrypted = call_js_function('encode',info_json, token)
+    encrypted = call_js_function('encode',info_json, token) # 调用 JS 函数计算 info 字段值
     return '{SRBX1}' + encrypted
 # ================ 加密算法结束 ================
 

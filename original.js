@@ -1,3 +1,5 @@
+// original.js
+// 基本就是照抄网页 js，没什么好说的
 function encode(str, key) {
     if (str === '') return '';
     var v = s(str, true);
@@ -106,7 +108,7 @@ function CustomBase64(s) {
     }
     return x.join("");
 }
-// 基本就是照抄不动了，没什么好说的
+
 module.exports = {
     encode,
     s,
